@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "${RABBITMQ_PORT_AMQP}:1883"
+      - "${RABBITMQ_PORT_INTERNAL}:5672"
+      - "${RABBITMQ_PORT_UI}:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASS}
+    volumes:
+      - ./rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:${ELASTIC_VERSION}
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=${ES_JAVA_OPTS}
+    ports:
+      - "${ELASTIC_PORT}:9200"
+
+  subscriber:
+    build: ./subscriber
+    depends_on:
+      - rabbitmq
+      - elasticsearch
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:${KIBANA_VERSION}
+    container_name: kibana
+    ports:
+      - "${KIBANA_PORT}:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=${ELASTICSEARCH_URL}
+      - SERVER_NAME=${KIBANA_SERVER_NAME}
+      - SERVER_PUBLICBASEURL=${KIBANA_BASE_URL}
+    depends_on:
+      - elasticsearch
